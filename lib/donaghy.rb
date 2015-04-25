@@ -81,4 +81,6 @@ require 'configliere'
 
 require 'donaghy/configuration'
 
+require 'donaghy/adapters/bunny_adapter'
+
 

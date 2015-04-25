@@ -1,0 +1,13 @@
+gem:
+  build: .
+  environment:
+    RABBITMQ_URL: amqp://rabbitmq
+  links:
+    - rabbitmq
+  volumes:
+    - .:/usr/src/app
+
+rabbitmq:
+  image: rabbitmq:3.5-management
+  ports:
+    - 8082:15672
