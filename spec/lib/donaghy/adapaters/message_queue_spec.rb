@@ -7,9 +7,11 @@ module Donaghy
       describe "receiving" do
         subject { MessageQueue.new(name: 'bob', options: {auto_delete: true}) }
 
+        let(:event) { Event.new(payload: {value: 'hi'}) }
+
         it "receives" do
-          BunnyAdapter.publish('bob', 'hi')
-          expect(subject.receive[:payload]).to eq('hi')
+          subject.publish(event)
+          expect(subject.receive.payload).to eq(event)
         end
 
       end

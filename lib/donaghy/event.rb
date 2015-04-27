@@ -1,0 +1,110 @@
+require 'hashie/mash'
+require 'json'
+require 'donaghy/logging'
+
+module Donaghy
+
+  class Event
+    include Logging
+
+    def self.from_json(json)
+      from_hash(JSON.parse(json))
+    end
+
+    def self.from_hash(hsh)
+      new(hsh.merge(without_append: true))
+    end
+
+    # (topper) we use value, timer,context for sending to errplane (at least)
+    ATTRIBUTE_METHODS = [
+        :id,
+        :version,
+        :payload,
+        :dimensions,
+        :generated_at,
+        :generated_by,
+        :path,
+        :value,
+        :context,
+        :timer,
+        :received_on,
+        :retry_count,
+    ]
+
+    attr_accessor *ATTRIBUTE_METHODS
+    def initialize(opts)
+      without_append = opts.delete(:without_append)
+
+      @generated_at = Time.now.utc
+      opts.each_pair do |key, value|
+        self.send("#{key}=", value)
+      end
+      @id ||= Celluloid::UUID.generate
+      @retry_count ||= 0
+      @generated_by ||= []
+      @generated_by << path unless without_append
+      self
+    end
+
+    def payload=(val)
+      @payload = if !val
+                   nil
+                 elsif val.kind_of?(Hash)
+                   Hashie::Mash.new(val)
+                 else
+                   Hashie::Mash.new(:value => val)
+                 end
+    end
+
+    def generated_at
+      if @generated_at.is_a?(String)
+        @generated_at = Time.parse(@generated_at)
+      else
+        @generated_at
+      end
+    end
+
+    def to_hash(options = {})
+      (ATTRIBUTE_METHODS - Array(options[:without])).inject({}) do |hsh, meth|
+        hsh[meth] = send(meth)
+        hsh
+      end
+    end
+
+    def to_json(options = {})
+      JSON.dump(to_hash(options.merge(without: [:received_on])))
+    rescue StandardError => e
+      logger.error("could not to json: #{self.inspect}, had error: #{e.inspect} with backtrace: #{e.backtrace.join("\n")}")
+      raise e
+    end
+
+    def ==(other)
+      !((ATTRIBUTE_METHODS - [:id, :generated_at, :retry_count, :received_on, :value]).detect {|method| self.send(method) != other.send(method) })
+    end
+
+    def acknowledge
+      raise NotImplementedError
+      #to be implemented by the MessageQueue adapter
+    end
+
+    def heartbeat(timeout=nil)
+      raise NotImplementedError
+      # to be implemented by the MessageQueue adapter
+    end
+
+    def requeue(opts={})
+      (self.received_on || Donaghy.root_queue).publish(self, opts)
+      acknowledge
+    end
+
+    def to_s
+      inspect
+    end
+
+    def inspect
+      to_hash.inspect
+    end
+
+  end
+
+end

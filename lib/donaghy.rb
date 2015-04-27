@@ -79,7 +79,10 @@ $: << File.dirname(__FILE__)
 require 'active_support/core_ext/string/inflections'
 require 'configliere'
 
+require 'donaghy/logging'
 require 'donaghy/configuration'
+require 'donaghy/event'
+require 'donaghy/fetcher'
 
 require 'donaghy/adapters/bunny_adapter'
 

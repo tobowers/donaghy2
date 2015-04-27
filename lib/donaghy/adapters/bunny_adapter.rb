@@ -1,10 +1,14 @@
 require 'monitor'
 require 'bunny'
 
+require 'pry'
+
 $LOAD_PATH.unshift(File.dirname(__FILE__))
 
 module Donaghy
   module BunnyAdapter
+    # using the slower monitor as it's thread re-entrant. We avoid actually having to synchronize
+    # except in the initialization case
     MONITOR = Monitor.new
 
     def self.connection
@@ -15,8 +19,9 @@ module Donaghy
       end
     end
 
-    def self.publish(key, payload)
-      exchange.publish(payload, routing_key: key)
+    def self.publish(key, event)
+      binding.pry
+      exchange.publish(event.to_json, routing_key: key)
     end
 
     def self.exchange

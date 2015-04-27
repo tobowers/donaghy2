@@ -1,3 +1,5 @@
+require 'bunny_adapter/event'
+
 module Donaghy
   module BunnyAdapter
     class MessageQueue
@@ -10,8 +12,12 @@ module Donaghy
       end
 
       def receive
-        delivery_info, properties, payload = bunny_queue.pop
-        {delivery_info: delivery_info, properties: properties, payload: payload}
+        _delivery_info, _properties, _payload = bunny_queue.pop
+        BunnyAdapter::Event.from_json(payload)
+      end
+
+      def publish(event)
+        BunnyAdapter.publish(event, name)
       end
 
     private
